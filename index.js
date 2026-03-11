@@ -29,7 +29,6 @@ app.get("/db-status", (req, res) => {
     res.json({ status: "success", message: "Database is connected!" });
   });
 });
-
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
