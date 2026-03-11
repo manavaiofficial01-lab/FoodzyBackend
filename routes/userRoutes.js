@@ -8,4 +8,8 @@ router.get("/:id", userController.getUserById);
 router.put("/:id", userController.updateUser);
 router.delete("/:id", userController.deleteUser);
 
+// Token based routes
+router.get("/token/:token", userController.getUserByToken);
+router.put("/token/:token", userController.updateUserByToken);
+
 module.exports = router;

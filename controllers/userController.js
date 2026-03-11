@@ -49,6 +49,21 @@ exports.getUserById = (req, res) => {
   });
 };
 
+// Get User by JWT Token
+exports.getUserByToken = (req, res) => {
+  const { token } = req.params;
+  const sql = "SELECT * FROM users WHERE jwt_token = ?";
+  db.query(sql, [token], (err, result) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (result.length === 0) {
+      return res.status(404).json({ message: "User not found with this token" });
+    }
+    res.status(200).json(result[0]);
+  });
+};
+
 // Update User
 exports.updateUser = (req, res) => {
   const { id } = req.params;
@@ -73,6 +88,32 @@ exports.updateUser = (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
     res.status(200).json({ message: "User updated successfully" });
+  });
+};
+
+// Update User by JWT Token
+exports.updateUserByToken = (req, res) => {
+  const { token } = req.params;
+  const fields = req.body;
+  const keys = Object.keys(fields);
+
+  if (keys.length === 0) {
+    return res.status(400).json({ message: "No fields to update" });
+  }
+
+  const setClause = keys.map(key => `${key} = ?`).join(", ");
+  const values = [...Object.values(fields), token];
+
+  const sql = `UPDATE users SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE jwt_token = ?`;
+
+  db.query(sql, values, (err, result) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "User not found with this token" });
+    }
+    res.status(200).json({ message: "User updated successfully via token" });
   });
 };
 
