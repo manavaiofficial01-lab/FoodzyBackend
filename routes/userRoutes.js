@@ -12,4 +12,7 @@ router.delete("/:id", userController.deleteUser);
 router.get("/token/:token", userController.getUserByToken);
 router.put("/token/:token", userController.updateUserByToken);
 
+// Update FCM Token
+router.post("/update-fcm", userController.updateFcmToken);
+
 module.exports = router;

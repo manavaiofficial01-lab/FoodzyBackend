@@ -131,3 +131,31 @@ exports.deleteUser = (req, res) => {
     res.status(200).json({ message: "User deleted successfully" });
   });
 };
+// Update FCM Token
+exports.updateFcmToken = (req, res) => {
+  const { userId, fcmToken, platform } = req.body;
+
+  if (!userId || !fcmToken) {
+    return res.status(400).json({ success: false, message: "userId and fcmToken are required" });
+  }
+
+  const sql = "UPDATE users SET fcm_token = ?, platform = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+  const values = [fcmToken, platform, userId];
+
+  db.query(sql, values, (err, result) => {
+    if (err) {
+      console.error("Error updating FCM token:", err);
+      return res.status(500).json({ success: false, message: "Internal server error" });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    console.log(`Updating FCM for user ${userId}: ${fcmToken}`);
+    res.status(200).json({
+      success: true,
+      message: "FCM token updated successfully"
+    });
+  });
+};
