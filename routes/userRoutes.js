@@ -15,4 +15,7 @@ router.put("/token/:token", userController.updateUserByToken);
 // Update FCM Token
 router.post("/update-fcm", userController.updateFcmToken);
 
+// Update Location
+router.post("/update-location", userController.updateLocation);
+
 module.exports = router;

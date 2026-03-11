@@ -159,3 +159,31 @@ exports.updateFcmToken = (req, res) => {
     });
   });
 };
+// Update Location
+exports.updateLocation = (req, res) => {
+  const { userId, latitude, longitude, address } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ success: false, message: "userId is required" });
+  }
+
+  const sql = "UPDATE users SET latitude = ?, longitude = ?, address = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+  const values = [latitude, longitude, address, userId];
+
+  db.query(sql, values, (err, result) => {
+    if (err) {
+      console.error("Error updating location:", err);
+      return res.status(500).json({ success: false, message: "Internal server error" });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    console.log(`Updating Location for user ${userId}: ${latitude}, ${longitude}`);
+    res.status(200).json({
+      success: true,
+      message: "Location updated successfully"
+    });
+  });
+};
