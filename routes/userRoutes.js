@@ -18,4 +18,7 @@ router.post("/update-fcm", userController.updateFcmToken);
 // Update Location
 router.post("/update-location", userController.updateLocation);
 
+// Update Zone
+router.post("/update-zone", userController.updateZone);
+
 module.exports = router;

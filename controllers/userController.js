@@ -187,3 +187,27 @@ exports.updateLocation = (req, res) => {
     });
   });
 };
+
+// Update User Zone
+exports.updateZone = (req, res) => {
+  const { userId, zoneId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ success: false, message: "userId is required" });
+  }
+
+  const sql = "UPDATE users SET zone_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+  const values = [zoneId ?? null, userId];
+
+  db.query(sql, values, (err, result) => {
+    if (err) {
+      console.error("Error updating zone:", err);
+      return res.status(500).json({ success: false, message: "Internal server error" });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    console.log(`Zone updated for user ${userId}: zone_id = ${zoneId}`);
+    res.status(200).json({ success: true, message: "Zone updated successfully" });
+  });
+};
