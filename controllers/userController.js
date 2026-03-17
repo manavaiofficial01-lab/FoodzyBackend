@@ -188,16 +188,16 @@ exports.updateLocation = (req, res) => {
   });
 };
 
-// Update User Zone
+// Update User Zone (stores zone name into the `zone` varchar column)
 exports.updateZone = (req, res) => {
-  const { userId, zoneId } = req.body;
+  const { userId, zoneName } = req.body;
 
   if (!userId) {
     return res.status(400).json({ success: false, message: "userId is required" });
   }
 
-  const sql = "UPDATE users SET zone_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
-  const values = [zoneId ?? null, userId];
+  const sql = "UPDATE users SET zone = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+  const values = [zoneName ?? null, userId];
 
   db.query(sql, values, (err, result) => {
     if (err) {
@@ -207,7 +207,7 @@ exports.updateZone = (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
-    console.log(`Zone updated for user ${userId}: zone_id = ${zoneId}`);
+    console.log(`Zone updated for user ${userId}: zone = ${zoneName}`);
     res.status(200).json({ success: true, message: "Zone updated successfully" });
   });
 };
