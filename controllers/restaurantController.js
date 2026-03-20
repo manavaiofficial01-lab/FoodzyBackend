@@ -37,16 +37,15 @@ exports.getAllRestaurants = (req, res) => {
           ), 2
         ) AS distance_km
       FROM restaurants
-      WHERE hotel_status = 'open'
-        AND latitude  IS NOT NULL
+      WHERE latitude  IS NOT NULL
         AND longitude IS NOT NULL
       HAVING distance_km <= ?
-      ORDER BY distance_km ASC
+      ORDER BY FIELD(hotel_status, 'open', 'close') ASC, distance_km ASC
     `;
     params = [userLat, userLon, userLat, maxKm];
   } else {
-    // Fallback — no coords provided, return all open by position
-    sql = `SELECT *, NULL AS distance_km FROM restaurants WHERE hotel_status = 'open' ORDER BY position ASC`;
+    // Fallback — no coords provided, return all by position
+    sql = `SELECT *, NULL AS distance_km FROM restaurants ORDER BY FIELD(hotel_status, 'open', 'close') ASC, position ASC`;
     params = [];
   }
 

@@ -8,4 +8,4 @@ router.get("/", restaurantController.getAllRestaurants);
 // GET /api/restaurants/:id   → Single restaurant by ID
 router.get("/:id", restaurantController.getRestaurantById);
 
-module.exports = router;
+module.exports = router; 

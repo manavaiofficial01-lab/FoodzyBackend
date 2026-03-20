@@ -7,6 +7,7 @@ const userRoutes = require("./routes/userRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const zoneRoutes = require("./routes/zoneRoutes");
 const restaurantRoutes = require("./routes/restaurantRoutes");
+const foodItemRoutes = require("./routes/foodItemRoutes");
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/zones", zoneRoutes);
 app.use("/api/restaurants", restaurantRoutes);
+app.use("/api/food-items", foodItemRoutes);
 
 app.get("/", (req, res) => {
   res.send("Foodzy Backend is running!");
