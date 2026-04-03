@@ -1,4 +1,6 @@
 const express = require("express");
+const path = require("path");
+
 const bodyParser = require("body-parser");
 const Razorpay = require("razorpay");
 const dotenv = require("dotenv");
@@ -8,6 +10,8 @@ const categoryRoutes = require("./routes/categoryRoutes");
 const zoneRoutes = require("./routes/zoneRoutes");
 const restaurantRoutes = require("./routes/restaurantRoutes");
 const foodItemRoutes = require("./routes/foodItemRoutes");
+const exploreRoutes = require("./routes/exploreRoutes");
+
 
 dotenv.config();
 
@@ -16,6 +20,8 @@ const port = process.env.PORT || 3000;
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 
 // Routes
 app.use("/api/users", userRoutes);
@@ -23,6 +29,8 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/zones", zoneRoutes);
 app.use("/api/restaurants", restaurantRoutes);
 app.use("/api/food-items", foodItemRoutes);
+app.use("/api/explore", exploreRoutes);
+
 
 app.get("/", (req, res) => {
   res.send("Foodzy Backend is running!");

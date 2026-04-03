@@ -1,7 +1,8 @@
 const db = require('./config/db');
 
 const createTableQuery = `
-CREATE TABLE IF NOT EXISTS food_items (
+DROP TABLE IF EXISTS food_items;
+CREATE TABLE food_items (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     
     name TEXT NOT NULL,
@@ -28,10 +29,9 @@ CREATE TABLE IF NOT EXISTS food_items (
     profit DECIMAL(10,2) NULL,
     food_position INT DEFAULT 0,
     
-    -- changed from BOOLEAN → INTEGER
-    morning INT DEFAULT 0,
-    afternoon INT DEFAULT 0,
-    evening INT DEFAULT 0,
+    morning TEXT NULL,
+    afternoon TEXT NULL,
+    evening TEXT NULL,
     
     night BOOLEAN DEFAULT FALSE,
     

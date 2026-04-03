@@ -1,0 +1,36 @@
+﻿[dotenv@17.3.1] injecting env (7) from .env -- tip: ≡ƒöÉ encrypt with Dotenvx: https://dotenvx.com
+Database connection pool created.
+Offers: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Foffers.png?alt=media
+Biryani: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fbiryani.png?alt=media
+Pizza: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fpizza.png?alt=media
+Burger: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fburger.png?alt=media
+Fried Chicken: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Ffriedchicken.png?alt=media
+Crispy: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fcrispy.png?alt=media
+Snacks: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fsnacks.png?alt=media
+Chicken: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fchicken.png?alt=media
+Pasta: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fpasta.png?alt=media
+Maggi: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fmaggi.png?alt=media
+Chilli Chicken: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fchilli%20chicken.png?alt=media
+Mutton: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fmutton.png?alt=media
+Sea Foods: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Ffish.png?alt=media
+South Indian: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fidli.png?alt=media
+Dosa: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fdosa.png?alt=media
+Parotta: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fparotta.png?alt=media
+Fried Rice: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Ffriedrice.png?alt=media
+Naan & Gravy: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fnorthindian.png?alt=media
+Noodles: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fnoodles.png?alt=media
+Rolls: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Frolls.png?alt=media
+Momos: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fmomos.png?alt=media
+Sandwich: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fsandwich.jpg?alt=media
+Soup: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fsoup.png?alt=media
+Veg: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fveg.png?alt=media
+Sweets: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fswwts.png?alt=media
+Cake's: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fcakes.png?alt=media
+Bday Cake: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fbdaycake.png?alt=media
+Ice Cream: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Ficecream.png?alt=media
+Coffee: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fcoffee.png?alt=media
+Tea: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Ftea.png?alt=media
+Fresh Juice: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Ffreshjuice.png?alt=media
+Shakes: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fshakes.png?alt=media
+Mocktail: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fmocktail.png?alt=media
+Mojito: https://firebasestorage.googleapis.com/v0/b/manavai-2adb5.firebasestorage.app/o/Project%20Assets%2FCategories%2Fmojito.png?alt=media

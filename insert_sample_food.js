@@ -15,9 +15,9 @@ const foodItems = [
     calories: 80,
     prep_time: '10-15 mins',
     image_url: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=400&q=80',
-    morning: 1,
-    afternoon: 1,
-    evening: 1,
+    morning: '6AM-11AM',
+    afternoon: '12PM-4PM',
+    evening: '5PM-9PM',
     night: 0
   },
   {
@@ -34,10 +34,10 @@ const foodItems = [
     calories: 320,
     prep_time: '20-25 mins',
     image_url: 'https://images.unsplash.com/photo-1563379091339-03b21bc4a4f8?auto=format&fit=crop&w=400&q=80',
-    morning: 0,
-    afternoon: 1,
-    evening: 1,
-    night: 0
+    morning: 'No',
+    afternoon: '12PM-4PM',
+    evening: '5PM-9PM',
+    night: 1
   },
   {
     name: 'Paneer Tikka Roll',
@@ -53,9 +53,9 @@ const foodItems = [
     calories: 280,
     prep_time: '10-15 mins',
     image_url: 'https://images.unsplash.com/photo-1626777553760-0a2b0051e5e0?auto=format&fit=crop&w=400&q=80',
-    morning: 0,
-    afternoon: 1,
-    evening: 1,
+    morning: 'No',
+    afternoon: '12PM-4PM',
+    evening: '5PM-11PM',
     night: 1
   }
 ];
