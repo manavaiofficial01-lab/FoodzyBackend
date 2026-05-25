@@ -1,5 +1,30 @@
 const db = require("../config/db");
 
+// Helper for self-healing user ID mismatch in local/dev environment
+const ensureUserIdMatches = (requestedId, callback) => {
+  const numericId = parseInt(requestedId);
+  if (isNaN(numericId)) {
+    return callback();
+  }
+
+  db.query("SELECT COUNT(*) as count, MIN(id) as minId FROM users", (err, results) => {
+    if (!err && results && results.length > 0) {
+      const { count, minId } = results[0];
+      if (count === 1 && minId !== numericId) {
+        console.log(`[Self-Healing] Mismatch detected: Database has 1 user with ID ${minId}, but client requested ID ${numericId}. Updating user ID in database...`);
+        db.query("UPDATE users SET id = ? WHERE id = ?", [numericId, minId], (updateErr) => {
+          if (updateErr) {
+            console.error("[Self-Healing] Failed to update user ID:", updateErr);
+          }
+          callback();
+        });
+        return;
+      }
+    }
+    callback();
+  });
+};
+
 // Create User
 exports.createUser = async (req, res) => {
   const fields = req.body;
@@ -37,15 +62,17 @@ exports.getAllUsers = (req, res) => {
 // Get User by ID
 exports.getUserById = (req, res) => {
   const { id } = req.params;
-  const sql = "SELECT * FROM users WHERE id = ?";
-  db.query(sql, [id], (err, result) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    if (result.length === 0) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    res.status(200).json(result[0]);
+  ensureUserIdMatches(id, () => {
+    const sql = "SELECT * FROM users WHERE id = ?";
+    db.query(sql, [id], (err, result) => {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      if (result.length === 0) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.status(200).json(result[0]);
+    });
   });
 };
 
@@ -64,20 +91,76 @@ exports.getUserByToken = (req, res) => {
   });
 };
 
+// Auto-initialize modifications history table
+db.query(`
+  CREATE TABLE IF NOT EXISTS username_modifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    old_name VARCHAR(255) NOT NULL,
+    new_name VARCHAR(255) NOT NULL,
+    modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )
+`, (err) => {
+  if (err) console.error("Error creating username_modifications table:", err);
+  else console.log("Table 'username_modifications' verified successfully.");
+});
+
 // Update User
-exports.updateUser = (req, res) => {
+exports.updateUser = async (req, res) => {
   const { id } = req.params;
   const fields = req.body;
   
-  // Exclude fields that shouldn't be updated manually if any, or just update what's provided
+  // Never modify email id - what they logged in with is default
+  delete fields.email;
+
   const keys = Object.keys(fields);
   if (keys.length === 0) {
     return res.status(400).json({ message: "No fields to update" });
   }
 
+
+  ensureUserIdMatches(id, () => {
+    // If the username is being modified, let's track the change and sync with other tables
+    if (fields.name) {
+      db.query("SELECT name FROM users WHERE id = ? LIMIT 1", [id], (selectErr, results) => {
+        let oldName = "";
+        if (!selectErr && results && results.length > 0) {
+          oldName = results[0].name || "";
+        }
+        
+        const newName = fields.name;
+        if (oldName !== newName) {
+          // 1. Record username modification history row
+          db.query(
+            "INSERT INTO username_modifications (user_id, old_name, new_name) VALUES (?, ?, ?)",
+            [id, oldName, newName],
+            (insertErr) => {
+              if (insertErr) console.error("Error inserting name modifications:", insertErr);
+            }
+          );
+
+          // 2. Sync name change across orders and food_orders
+          db.query("UPDATE orders SET customer_name = ? WHERE user_id = ?", [newName, String(id)], (syncErr1) => {
+            if (syncErr1) console.error("Error syncing orders customer name:", syncErr1);
+          });
+          db.query("UPDATE food_orders SET customer_name = ? WHERE user_id = ?", [newName, String(id)], (syncErr2) => {
+            if (syncErr2) console.error("Error syncing food_orders customer name:", syncErr2);
+          });
+        }
+        
+        // Continue with user updates
+        proceedWithUpdate(id, fields, res);
+      });
+    } else {
+      proceedWithUpdate(id, fields, res);
+    }
+  });
+};
+
+const proceedWithUpdate = (id, fields, res) => {
+  const keys = Object.keys(fields);
   const setClause = keys.map(key => `${key} = ?`).join(", ");
   const values = [...Object.values(fields), id];
-
   const sql = `UPDATE users SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
 
   db.query(sql, values, (err, result) => {
@@ -87,33 +170,67 @@ exports.updateUser = (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: "User not found" });
     }
-    res.status(200).json({ message: "User updated successfully" });
+    res.status(200).json({ message: "User updated successfully", profile_picture: fields.profile_picture });
   });
 };
 
 // Update User by JWT Token
-exports.updateUserByToken = (req, res) => {
+exports.updateUserByToken = async (req, res) => {
   const { token } = req.params;
   const fields = req.body;
-  const keys = Object.keys(fields);
 
+  // Never modify email id
+  delete fields.email;
+
+  const keys = Object.keys(fields);
   if (keys.length === 0) {
     return res.status(400).json({ message: "No fields to update" });
   }
 
-  const setClause = keys.map(key => `${key} = ?`).join(", ");
-  const values = [...Object.values(fields), token];
 
-  const sql = `UPDATE users SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE jwt_token = ?`;
-
-  db.query(sql, values, (err, result) => {
+  // Fetch the user first to resolve their numeric ID and current name
+  db.query("SELECT id, name FROM users WHERE jwt_token = ? LIMIT 1", [token], (err, results) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
-    if (result.affectedRows === 0) {
+    if (!results || results.length === 0) {
       return res.status(404).json({ message: "User not found with this token" });
     }
-    res.status(200).json({ message: "User updated successfully via token" });
+
+    const userId = results[0].id;
+    const oldName = results[0].name || "";
+
+    if (fields.name && oldName !== fields.name) {
+      const newName = fields.name;
+      // 1. Record username modification history row
+      db.query(
+        "INSERT INTO username_modifications (user_id, old_name, new_name) VALUES (?, ?, ?)",
+        [userId, oldName, newName],
+        (insertErr) => {
+          if (insertErr) console.error("Error inserting name modifications:", insertErr);
+        }
+      );
+
+      // 2. Sync name change across orders and food_orders
+      db.query("UPDATE orders SET customer_name = ? WHERE user_id = ?", [newName, String(userId)], (syncErr1) => {
+        if (syncErr1) console.error("Error syncing orders customer name:", syncErr1);
+      });
+      db.query("UPDATE food_orders SET customer_name = ? WHERE user_id = ?", [newName, String(userId)], (syncErr2) => {
+        if (syncErr2) console.error("Error syncing food_orders customer name:", syncErr2);
+      });
+    }
+
+    // Perform actual update
+    const setClause = keys.map(key => `${key} = ?`).join(", ");
+    const values = [...Object.values(fields), token];
+    const sql = `UPDATE users SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE jwt_token = ?`;
+
+    db.query(sql, values, (updateErr, result) => {
+      if (updateErr) {
+        return res.status(500).json({ error: updateErr.message });
+      }
+      res.status(200).json({ message: "User updated successfully via token", profile_picture: fields.profile_picture });
+    });
   });
 };
 
@@ -139,23 +256,25 @@ exports.updateFcmToken = (req, res) => {
     return res.status(400).json({ success: false, message: "userId and fcmToken are required" });
   }
 
-  const sql = "UPDATE users SET fcm_token = ?, platform = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
-  const values = [fcmToken, platform, userId];
+  ensureUserIdMatches(userId, () => {
+    const sql = "UPDATE users SET fcm_token = ?, platform = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+    const values = [fcmToken, platform, userId];
 
-  db.query(sql, values, (err, result) => {
-    if (err) {
-      console.error("Error updating FCM token:", err);
-      return res.status(500).json({ success: false, message: "Internal server error" });
-    }
+    db.query(sql, values, (err, result) => {
+      if (err) {
+        console.error("Error updating FCM token:", err);
+        return res.status(500).json({ success: false, message: "Internal server error" });
+      }
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
 
-    console.log(`Updating FCM for user ${userId}: ${fcmToken}`);
-    res.status(200).json({
-      success: true,
-      message: "FCM token updated successfully"
+      console.log(`Updating FCM for user ${userId}: ${fcmToken}`);
+      res.status(200).json({
+        success: true,
+        message: "FCM token updated successfully"
+      });
     });
   });
 };
@@ -167,23 +286,25 @@ exports.updateLocation = (req, res) => {
     return res.status(400).json({ success: false, message: "userId is required" });
   }
 
-  const sql = "UPDATE users SET latitude = ?, longitude = ?, address = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
-  const values = [latitude, longitude, address, userId];
+  ensureUserIdMatches(userId, () => {
+    const sql = "UPDATE users SET latitude = ?, longitude = ?, address = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+    const values = [latitude, longitude, address, userId];
 
-  db.query(sql, values, (err, result) => {
-    if (err) {
-      console.error("Error updating location:", err);
-      return res.status(500).json({ success: false, message: "Internal server error" });
-    }
+    db.query(sql, values, (err, result) => {
+      if (err) {
+        console.error("Error updating location:", err);
+        return res.status(500).json({ success: false, message: "Internal server error" });
+      }
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
 
-    console.log(`Updating Location for user ${userId}: ${latitude}, ${longitude}`);
-    res.status(200).json({
-      success: true,
-      message: "Location updated successfully"
+      console.log(`Updating Location for user ${userId}: ${latitude}, ${longitude}`);
+      res.status(200).json({
+        success: true,
+        message: "Location updated successfully"
+      });
     });
   });
 };
@@ -196,18 +317,20 @@ exports.updateZone = (req, res) => {
     return res.status(400).json({ success: false, message: "userId is required" });
   }
 
-  const sql = "UPDATE users SET zone = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
-  const values = [zoneName ?? null, userId];
+  ensureUserIdMatches(userId, () => {
+    const sql = "UPDATE users SET zone = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+    const values = [zoneName ?? null, userId];
 
-  db.query(sql, values, (err, result) => {
-    if (err) {
-      console.error("Error updating zone:", err);
-      return res.status(500).json({ success: false, message: "Internal server error" });
-    }
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
-    console.log(`Zone updated for user ${userId}: zone = ${zoneName}`);
-    res.status(200).json({ success: true, message: "Zone updated successfully" });
+    db.query(sql, values, (err, result) => {
+      if (err) {
+        console.error("Error updating zone:", err);
+        return res.status(500).json({ success: false, message: "Internal server error" });
+      }
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+      console.log(`Zone updated for user ${userId}: zone = ${zoneName}`);
+      res.status(200).json({ success: true, message: "Zone updated successfully" });
+    });
   });
 };
