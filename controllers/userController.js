@@ -387,7 +387,22 @@ exports.getUserById = async (req, res) => {
       console.log(`[MySQL Miss] User ${id} not found in MySQL. Checking Supabase...`);
       const supabaseUser = await fetchFromSupabase('id', id);
       if (supabaseUser) {
-        console.log(`[Supabase Get] Successfully fetched user ${id} from Supabase.`);
+        console.log(`[Supabase Get] Successfully fetched user ${id} from Supabase. Restoring to MySQL...`);
+        const insertSql = "INSERT INTO users (id, name, email, mobile, password, jwt_token, profile_picture, platform) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        db.query(insertSql, [
+          supabaseUser.id,
+          supabaseUser.name,
+          supabaseUser.email,
+          supabaseUser.mobile,
+          supabaseUser.password,
+          supabaseUser.jwt_token,
+          supabaseUser.profile_picture,
+          supabaseUser.platform || 'android'
+        ], (insertErr) => {
+          if (insertErr) {
+            console.error("[ID Supabase Restore Error]:", insertErr.message);
+          }
+        });
         return res.status(200).json(supabaseUser);
       }
 
@@ -414,7 +429,22 @@ exports.getUserByToken = async (req, res) => {
     console.log(`[MySQL Miss] User with token not found in MySQL. Checking Supabase...`);
     const supabaseUser = await fetchFromSupabase('jwt_token', token);
     if (supabaseUser) {
-      console.log(`[Supabase Get] Successfully fetched user by token from Supabase.`);
+      console.log(`[Supabase Get] Successfully fetched user by token from Supabase. Restoring to MySQL...`);
+      const insertSql = "INSERT INTO users (id, name, email, mobile, password, jwt_token, profile_picture, platform) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+      db.query(insertSql, [
+        supabaseUser.id,
+        supabaseUser.name,
+        supabaseUser.email,
+        supabaseUser.mobile,
+        supabaseUser.password,
+        supabaseUser.jwt_token,
+        supabaseUser.profile_picture,
+        supabaseUser.platform || 'android'
+      ], (insertErr) => {
+        if (insertErr) {
+          console.error("[Token Supabase Restore Error]:", insertErr.message);
+        }
+      });
       return res.status(200).json(supabaseUser);
     }
 
