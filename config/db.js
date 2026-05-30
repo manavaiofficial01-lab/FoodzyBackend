@@ -55,13 +55,17 @@ function resolveHostSync(host) {
   return host;
 }
 
-const resolvedHost = resolveHostSync(process.env.DB_HOST);
+const cleanEnvVar = (val) => typeof val === 'string' ? val.trim() : val;
+
+const rawHost = cleanEnvVar(process.env.DB_HOST);
+const resolvedHost = resolveHostSync(rawHost);
 
 const db = mysql.createPool({
   host: resolvedHost,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+  user: cleanEnvVar(process.env.DB_USER),
+  password: cleanEnvVar(process.env.DB_PASSWORD),
+  database: cleanEnvVar(process.env.DB_NAME),
+  port: parseInt(cleanEnvVar(process.env.DB_PORT) || '3306'),
   lookup: customLookup,
   waitForConnections: true,
   connectionLimit: 15, // Increased to handle more requests simultaneously from multiple merged APIs
