@@ -39,96 +39,7 @@ const fetchWithTimeout = async (url, options = {}, timeoutMs = 3000) => {
   return Promise.race([fetchPromise, timeoutPromise]);
 };
 
-const saveToSupabase = async (userData) => {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_KEY;
 
-  if (!supabaseUrl || !supabaseKey || supabaseUrl === 'your_supabase_url') {
-    console.warn("[Supabase] URL/Key is missing or placeholder. Skipping sync.");
-    return;
-  }
-
-  try {
-    let baseUrl = supabaseUrl.trim();
-    if (baseUrl.endsWith('/')) {
-      baseUrl = baseUrl.slice(0, -1);
-    }
-    if (baseUrl.endsWith('/rest/v1')) {
-      baseUrl = baseUrl.substring(0, baseUrl.length - 8);
-    }
-    const url = `${baseUrl}/rest/v1/foodzy_user_data`;
-
-    const response = await fetchWithTimeout(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`,
-        'Prefer': 'resolution=merge-duplicates' // Upsert/merge duplicates
-      },
-      body: JSON.stringify({
-        id: userData.id,
-        name: userData.name || '',
-        email: userData.email || null,
-        mobile: userData.mobile || null,
-        password: userData.password || null,
-        profile_picture: userData.profile_picture || null,
-        platform: userData.platform || 'android',
-        jwt_token: userData.jwt_token || null
-      })
-    }, 5000);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("[Supabase Error] Failed to store user data:", errorText);
-    } else {
-      console.log(`[Supabase Success] Stored user ${userData.id} in foodzy_user_data.`);
-    }
-  } catch (error) {
-    console.error("[Supabase Connection Error] Could not write to Supabase:", error.message);
-  }
-};
-
-// Fetch user data from Supabase (manavai app) table foodzy_user_data
-const fetchFromSupabase = async (queryField, queryValue) => {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_KEY;
-
-  if (!supabaseUrl || !supabaseKey || supabaseUrl === 'your_supabase_url') {
-    return null;
-  }
-
-  try {
-    let baseUrl = supabaseUrl.trim();
-    if (baseUrl.endsWith('/')) {
-      baseUrl = baseUrl.slice(0, -1);
-    }
-    if (baseUrl.endsWith('/rest/v1')) {
-      baseUrl = baseUrl.substring(0, baseUrl.length - 8);
-    }
-    
-    const url = `${baseUrl}/rest/v1/foodzy_user_data?${queryField}=eq.${encodeURIComponent(queryValue)}&select=*`;
-
-    const response = await fetchWithTimeout(url, {
-      method: 'GET',
-      headers: {
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`
-      }
-    }, 3000);
-
-    if (response.ok) {
-      const data = await response.json();
-      if (data && data.length > 0) {
-        return data[0];
-      }
-    }
-    return null;
-  } catch (error) {
-    console.error("[Supabase Fetch Error] Could not query Supabase:", error.message);
-    return null;
-  }
-};
 
 // Helper for self-healing user ID mismatch in local/dev environment
 const ensureUserIdMatches = (requestedId, callback) => {
@@ -181,8 +92,7 @@ exports.createUser = async (req, res) => {
       ...fields
     };
     
-    // Trigger Supabase Sync in background
-    saveToSupabase(userData);
+
 
     res.status(201).json({ message: "User created successfully", userId: userId });
   });
@@ -234,8 +144,7 @@ exports.registerUser = async (req, res) => {
           jwt_token: jwtToken
         };
 
-        // Sync to Supabase in background
-        saveToSupabase(userData);
+
 
         res.status(201).json({
           message: "User registered successfully",
@@ -372,7 +281,7 @@ exports.getAllUsers = (req, res) => {
 exports.getUserById = async (req, res) => {
   const { id } = req.params;
 
-  // 1. Try MySQL first (extremely fast local query)
+  // Try MySQL first (extremely fast local query)
   ensureUserIdMatches(id, () => {
     const sql = "SELECT * FROM users WHERE id = ?";
     db.query(sql, [id], async (err, result) => {
@@ -382,30 +291,6 @@ exports.getUserById = async (req, res) => {
       if (result.length > 0) {
         return res.status(200).json(result[0]);
       }
-
-      // 2. Fallback to Supabase if not found in MySQL
-      console.log(`[MySQL Miss] User ${id} not found in MySQL. Checking Supabase...`);
-      const supabaseUser = await fetchFromSupabase('id', id);
-      if (supabaseUser) {
-        console.log(`[Supabase Get] Successfully fetched user ${id} from Supabase. Restoring to MySQL...`);
-        const insertSql = "INSERT INTO users (id, name, email, mobile, password, jwt_token, profile_picture, platform) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        db.query(insertSql, [
-          supabaseUser.id,
-          supabaseUser.name,
-          supabaseUser.email,
-          supabaseUser.mobile,
-          supabaseUser.password,
-          supabaseUser.jwt_token,
-          supabaseUser.profile_picture,
-          supabaseUser.platform || 'android'
-        ], (insertErr) => {
-          if (insertErr) {
-            console.error("[ID Supabase Restore Error]:", insertErr.message);
-          }
-        });
-        return res.status(200).json(supabaseUser);
-      }
-
       res.status(404).json({ message: "User not found" });
     });
   });
@@ -415,7 +300,7 @@ exports.getUserById = async (req, res) => {
 exports.getUserByToken = async (req, res) => {
   const { token } = req.params;
 
-  // 1. Try MySQL first (extremely fast local query)
+  // Try MySQL first (extremely fast local query)
   const sql = "SELECT * FROM users WHERE jwt_token = ?";
   db.query(sql, [token], async (err, result) => {
     if (err) {
@@ -424,30 +309,6 @@ exports.getUserByToken = async (req, res) => {
     if (result.length > 0) {
       return res.status(200).json(result[0]);
     }
-
-    // 2. Fallback to Supabase if not found in MySQL
-    console.log(`[MySQL Miss] User with token not found in MySQL. Checking Supabase...`);
-    const supabaseUser = await fetchFromSupabase('jwt_token', token);
-    if (supabaseUser) {
-      console.log(`[Supabase Get] Successfully fetched user by token from Supabase. Restoring to MySQL...`);
-      const insertSql = "INSERT INTO users (id, name, email, mobile, password, jwt_token, profile_picture, platform) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-      db.query(insertSql, [
-        supabaseUser.id,
-        supabaseUser.name,
-        supabaseUser.email,
-        supabaseUser.mobile,
-        supabaseUser.password,
-        supabaseUser.jwt_token,
-        supabaseUser.profile_picture,
-        supabaseUser.platform || 'android'
-      ], (insertErr) => {
-        if (insertErr) {
-          console.error("[Token Supabase Restore Error]:", insertErr.message);
-        }
-      });
-      return res.status(200).json(supabaseUser);
-    }
-
     res.status(404).json({ message: "User not found with this token" });
   });
 };
@@ -532,12 +393,7 @@ const proceedWithUpdate = (id, fields, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Sync updated record to Supabase
-    db.query("SELECT * FROM users WHERE id = ? LIMIT 1", [id], (selectErr, selectRes) => {
-      if (!selectErr && selectRes && selectRes.length > 0) {
-        saveToSupabase(selectRes[0]);
-      }
-    });
+
 
     res.status(200).json({ message: "User updated successfully", profile_picture: fields.profile_picture });
   });
@@ -599,12 +455,7 @@ exports.updateUserByToken = async (req, res) => {
         return res.status(500).json({ error: updateErr.message });
       }
 
-      // Sync updated record to Supabase
-      db.query("SELECT * FROM users WHERE jwt_token = ? LIMIT 1", [token], (selectErr, selectRes) => {
-        if (!selectErr && selectRes && selectRes.length > 0) {
-          saveToSupabase(selectRes[0]);
-        }
-      });
+
 
       res.status(200).json({ message: "User updated successfully via token", profile_picture: fields.profile_picture });
     });
@@ -742,11 +593,8 @@ exports.syncUser = async (req, res) => {
             user.name = name || user.name;
             user.profile_picture = profile_picture || user.profile_picture;
             user.jwt_token = jwt_token || user.jwt_token;
-            saveToSupabase(user);
           }
         });
-      } else {
-        saveToSupabase(user);
       }
       return res.status(200).json({ message: "User synced successfully", user });
     } else {
@@ -758,7 +606,6 @@ exports.syncUser = async (req, res) => {
         }
         const newUserId = result.insertId;
         const newUser = { id: newUserId, name, email, mobile, jwt_token, profile_picture, platform };
-        saveToSupabase(newUser);
         return res.status(201).json({ message: "User synced successfully", user: newUser });
       });
     }
