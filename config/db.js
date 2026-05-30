@@ -1,15 +1,70 @@
 const mysql = require("mysql2");
 const dotenv = require("dotenv");
+const dns = require("dns");
 
 dotenv.config();
 
+// Custom DNS lookup with public DNS fallback for restricted ISP environments
+const customLookup = (hostname, options, callback) => {
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return dns.lookup(hostname, options, callback);
+  }
+  
+  dns.lookup(hostname, options, (err, address, family) => {
+    if (err) {
+      console.log(`[DNS] OS lookup failed for ${hostname}. Querying fallback public DNS (Google/Cloudflare)...`);
+      const dnsPromises = require('dns').promises;
+      dnsPromises.setServers(['8.8.8.8', '1.1.1.1']);
+      dnsPromises.resolve4(hostname)
+        .then(addresses => {
+          if (addresses && addresses.length > 0) {
+            console.log(`[DNS] Resolved ${hostname} to ${addresses[0]} via public DNS.`);
+            callback(null, addresses[0], 4);
+          } else {
+            callback(err);
+          }
+        })
+        .catch(fallbackErr => {
+          console.error(`[DNS] Public DNS fallback failed for ${hostname}:`, fallbackErr.message);
+          callback(err);
+        });
+    } else {
+      callback(null, address, family);
+    }
+  });
+};
+
+const { execSync } = require('child_process');
+
+function resolveHostSync(host) {
+  if (!host || host === 'localhost' || host === '127.0.0.1') return host;
+  try {
+    console.log(`[DNS-PRE] Synchronously resolving hostname via nslookup: ${host}`);
+    const stdout = execSync(`nslookup ${host} 8.8.8.8`, { timeout: 5000 }).toString();
+    const parts = stdout.split(/Name:/i);
+    if (parts.length > 1) {
+      const ipMatches = parts[1].match(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g);
+      if (ipMatches) {
+        console.log(`[DNS-PRE] Successfully resolved ${host} to IP: ${ipMatches[0]}`);
+        return ipMatches[0];
+      }
+    }
+  } catch (e) {
+    console.error("[DNS-PRE] nslookup Sync error:", e.message);
+  }
+  return host;
+}
+
+const resolvedHost = resolveHostSync(process.env.DB_HOST);
+
 const db = mysql.createPool({
-  host: process.env.DB_HOST,
+  host: resolvedHost,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
+  lookup: customLookup,
   waitForConnections: true,
-  connectionLimit: 10, // Increased to handle more requests simultaneously
+  connectionLimit: 15, // Increased to handle more requests simultaneously from multiple merged APIs
   queueLimit: 0
 });
 

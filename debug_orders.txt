@@ -1,0 +1,139 @@
+{
+  "dbErr": null,
+  "dbErr2": null,
+  "tables": [
+    {
+      "Tables_in_foodzy": "additional_fees"
+    },
+    {
+      "Tables_in_foodzy": "app_zone"
+    },
+    {
+      "Tables_in_foodzy": "cash_deposits"
+    },
+    {
+      "Tables_in_foodzy": "category_groups"
+    },
+    {
+      "Tables_in_foodzy": "delivery_charges"
+    },
+    {
+      "Tables_in_foodzy": "driver_location_history"
+    },
+    {
+      "Tables_in_foodzy": "driver_old"
+    },
+    {
+      "Tables_in_foodzy": "driver_sessions"
+    },
+    {
+      "Tables_in_foodzy": "drivers"
+    },
+    {
+      "Tables_in_foodzy": "earnings"
+    },
+    {
+      "Tables_in_foodzy": "ecommerce_cart_items"
+    },
+    {
+      "Tables_in_foodzy": "ecommerce_orders"
+    },
+    {
+      "Tables_in_foodzy": "food_cart_items"
+    },
+    {
+      "Tables_in_foodzy": "food_categories"
+    },
+    {
+      "Tables_in_foodzy": "food_items"
+    },
+    {
+      "Tables_in_foodzy": "food_orders"
+    },
+    {
+      "Tables_in_foodzy": "incentives"
+    },
+    {
+      "Tables_in_foodzy": "notification_logs"
+    },
+    {
+      "Tables_in_foodzy": "notifications"
+    },
+    {
+      "Tables_in_foodzy": "order_modifications"
+    },
+    {
+      "Tables_in_foodzy": "orders"
+    },
+    {
+      "Tables_in_foodzy": "payout_requests"
+    },
+    {
+      "Tables_in_foodzy": "payouts"
+    },
+    {
+      "Tables_in_foodzy": "product_categories"
+    },
+    {
+      "Tables_in_foodzy": "products"
+    },
+    {
+      "Tables_in_foodzy": "promo_banners"
+    },
+    {
+      "Tables_in_foodzy": "promo_codes"
+    },
+    {
+      "Tables_in_foodzy": "realtime_tracking"
+    },
+    {
+      "Tables_in_foodzy": "restaurants"
+    },
+    {
+      "Tables_in_foodzy": "reviews"
+    },
+    {
+      "Tables_in_foodzy": "sub_categories"
+    },
+    {
+      "Tables_in_foodzy": "support_tickets"
+    },
+    {
+      "Tables_in_foodzy": "user_limit_resets"
+    },
+    {
+      "Tables_in_foodzy": "username_modifications"
+    },
+    {
+      "Tables_in_foodzy": "users"
+    },
+    {
+      "Tables_in_foodzy": "wallet_transactions"
+    },
+    {
+      "Tables_in_foodzy": "warehouse"
+    }
+  ],
+  "drivers": [
+    {
+      "id": 3,
+      "full_name": "SAM",
+      "phone": "8940645818",
+      "is_online": 1,
+      "status": "online"
+    },
+    {
+      "id": 4,
+      "full_name": "FRANKLIN",
+      "phone": "8122141143",
+      "is_online": 1,
+      "status": "online"
+    }
+  ],
+  "ips": [
+    {
+      "interface": "Wi-Fi",
+      "address": "10.148.40.82"
+    }
+  ]
+}

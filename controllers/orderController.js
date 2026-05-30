@@ -349,14 +349,20 @@ exports.getUserOrders = async (req, res) => {
             numericId = user.id;
         }
 
-        // Query the food_orders table for this user
+        const limit = parseInt(req.query.limit) || 20;
+        const page = parseInt(req.query.page) || 1;
+        const offset = (page - 1) * limit;
+
+        // Query the food_orders table for this user with pagination
         const foodOrders = await new Promise((resolve, reject) => {
             db.query(
                 `SELECT fo.*, r.rating AS review_rating, r.comment AS review_comment 
                  FROM food_orders fo 
                  LEFT JOIN reviews r ON fo.id = r.order_id AND r.is_ecommerce = 0
-                 WHERE fo.user_id = ?`,
-                [numericId],
+                 WHERE fo.user_id = ?
+                 ORDER BY fo.created_at DESC
+                 LIMIT ? OFFSET ?`,
+                [numericId, limit, offset],
                 (err, results) => {
                     if (err) reject(err);
                     else resolve(results);
@@ -364,14 +370,16 @@ exports.getUserOrders = async (req, res) => {
             );
         });
 
-        // Query the ecommerce_orders table for this user
+        // Query the ecommerce_orders table for this user with pagination
         const ecommerceOrders = await new Promise((resolve, reject) => {
             db.query(
                 `SELECT eo.*, r.rating AS review_rating, r.comment AS review_comment 
                  FROM ecommerce_orders eo 
                  LEFT JOIN reviews r ON eo.id = r.order_id AND r.is_ecommerce = 1
-                 WHERE eo.user_id = ?`,
-                [numericId],
+                 WHERE eo.user_id = ?
+                 ORDER BY eo.created_at DESC
+                 LIMIT ? OFFSET ?`,
+                [numericId, limit, offset],
                 (err, results) => {
                     if (err) reject(err);
                     else resolve(results);
@@ -388,9 +396,14 @@ exports.getUserOrders = async (req, res) => {
             return new Date(b.created_at) - new Date(a.created_at);
         });
 
+        // Paginate the combined merged array
+        const paginatedOrders = mergedOrders.slice(0, limit);
+
         return res.status(200).json({
             success: true,
-            orders: mergedOrders
+            page,
+            limit,
+            orders: paginatedOrders
         });
     } catch (error) {
         console.error('❌ Error fetching user orders:', error.message);
