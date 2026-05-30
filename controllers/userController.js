@@ -256,7 +256,49 @@ exports.registerUser = async (req, res) => {
   });
 };
 
-// Login User (Email/Password custom login)
+// Helper to verify bcrypt password and send login response
+const verifyPasswordAndLogin = async (user, password, res) => {
+  // Check if account has password
+  if (!user.password) {
+    return res.status(400).json({ error: "This account was registered via Google. Please Log in with Google." });
+  }
+
+  try {
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ error: "Invalid credentials" });
+    }
+
+    // Generate or retrieve token
+    let jwtToken = user.jwt_token;
+    if (!jwtToken) {
+      jwtToken = jwt.sign(
+        { email: user.email, mobile: user.mobile },
+        process.env.JWT_SECRET || "foodzy_secret_key"
+      );
+      db.query("UPDATE users SET jwt_token = ? WHERE id = ?", [jwtToken, user.id]);
+    }
+
+    res.status(200).json({
+      message: "Login successful",
+      userId: user.id,
+      name: user.name,
+      email: user.email,
+      mobile: user.mobile,
+      jwt_token: jwtToken,
+      profile_picture: user.profile_picture,
+      latitude: user.latitude,
+      longitude: user.longitude,
+      zone: user.zone,
+      address: user.address
+    });
+  } catch (compareErr) {
+    console.error("Login verify error:", compareErr);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// Login User (Email/Password custom login with Supabase fallback sync)
 exports.loginUser = async (req, res) => {
   const { emailOrMobile, password } = req.body;
 
@@ -269,50 +311,48 @@ exports.loginUser = async (req, res) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
+    
     if (results.length === 0) {
+      console.log(`[MySQL Miss] User ${emailOrMobile} not found in MySQL. Checking Supabase fallback...`);
+      try {
+        let supabaseUser = await fetchFromSupabase('email', emailOrMobile);
+        if (!supabaseUser) {
+          let formattedMobile = emailOrMobile;
+          if (/^\d{10}$/.test(formattedMobile)) {
+            formattedMobile = `+91${formattedMobile}`;
+          }
+          supabaseUser = await fetchFromSupabase('mobile', formattedMobile);
+        }
+
+        if (supabaseUser) {
+          console.log(`[Supabase Found] Restoring user ${supabaseUser.name} to MySQL database...`);
+          const insertSql = "INSERT INTO users (id, name, email, mobile, password, jwt_token, profile_picture, platform) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+          db.query(insertSql, [
+            supabaseUser.id,
+            supabaseUser.name,
+            supabaseUser.email,
+            supabaseUser.mobile,
+            supabaseUser.password,
+            supabaseUser.jwt_token,
+            supabaseUser.profile_picture,
+            supabaseUser.platform || 'android'
+          ], (insertErr) => {
+            if (insertErr) {
+              console.error("[Login Supabase Restore Error]:", insertErr.message);
+              return res.status(400).json({ error: "Invalid credentials" });
+            }
+            verifyPasswordAndLogin(supabaseUser, password, res);
+          });
+          return;
+        }
+      } catch (fallbackErr) {
+        console.error("[Login Fallback Error]:", fallbackErr.message);
+      }
       return res.status(400).json({ error: "Invalid credentials" });
     }
 
     const user = results[0];
-
-    // Check if account has password
-    if (!user.password) {
-      return res.status(400).json({ error: "This account was registered via Google. Please Log in with Google." });
-    }
-
-    try {
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        return res.status(400).json({ error: "Invalid credentials" });
-      }
-
-      // Generate or retrieve token
-      let jwtToken = user.jwt_token;
-      if (!jwtToken) {
-        jwtToken = jwt.sign(
-          { email: user.email, mobile: user.mobile },
-          process.env.JWT_SECRET || "foodzy_secret_key"
-        );
-        db.query("UPDATE users SET jwt_token = ? WHERE id = ?", [jwtToken, user.id]);
-      }
-
-      res.status(200).json({
-        message: "Login successful",
-        userId: user.id,
-        name: user.name,
-        email: user.email,
-        mobile: user.mobile,
-        jwt_token: jwtToken,
-        profile_picture: user.profile_picture,
-        latitude: user.latitude,
-        longitude: user.longitude,
-        zone: user.zone,
-        address: user.address
-      });
-    } catch (compareErr) {
-      console.error("Login verify error:", compareErr);
-      res.status(500).json({ error: "Internal server error" });
-    }
+    verifyPasswordAndLogin(user, password, res);
   });
 };
 
@@ -639,5 +679,58 @@ exports.updateZone = (req, res) => {
       console.log(`Zone updated for user ${userId}: zone = ${zoneName}`);
       res.status(200).json({ success: true, message: "Zone updated successfully" });
     });
+  });
+};
+
+// Sync User from Mobile App Local Storage to MySQL/Supabase
+exports.syncUser = async (req, res) => {
+  const { id, name, email, mobile, jwt_token, profile_picture, platform } = req.body;
+  if (!email && !mobile) {
+    return res.status(400).json({ error: "Email or mobile is required to sync" });
+  }
+
+  // Check if user exists by jwt_token, email, or mobile in MySQL
+  const query = "SELECT * FROM users WHERE (jwt_token IS NOT NULL AND jwt_token = ?) OR email = ? OR (mobile IS NOT NULL AND mobile = ?)";
+  db.query(query, [jwt_token || null, email || null, mobile || null], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+
+    if (results.length > 0) {
+      // User exists, update fields if necessary
+      const user = results[0];
+      const updateFields = {};
+      if (name && user.name !== name) updateFields.name = name;
+      if (profile_picture && user.profile_picture !== profile_picture) updateFields.profile_picture = profile_picture;
+      if (jwt_token && user.jwt_token !== jwt_token) updateFields.jwt_token = jwt_token;
+      
+      const keys = Object.keys(updateFields);
+      if (keys.length > 0) {
+        const setClause = keys.map(key => `${key} = ?`).join(", ");
+        db.query(`UPDATE users SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [...Object.values(updateFields), user.id], (updateErr) => {
+          if (!updateErr) {
+            user.name = name || user.name;
+            user.profile_picture = profile_picture || user.profile_picture;
+            user.jwt_token = jwt_token || user.jwt_token;
+            saveToSupabase(user);
+          }
+        });
+      } else {
+        saveToSupabase(user);
+      }
+      return res.status(200).json({ message: "User synced successfully", user });
+    } else {
+      // User does not exist, insert new user
+      const insertSql = "INSERT INTO users (name, email, mobile, jwt_token, profile_picture, platform) VALUES (?, ?, ?, ?, ?, ?)";
+      db.query(insertSql, [name, email, mobile, jwt_token, profile_picture, platform || 'android'], (insertErr, result) => {
+        if (insertErr) {
+          return res.status(500).json({ error: insertErr.message });
+        }
+        const newUserId = result.insertId;
+        const newUser = { id: newUserId, name, email, mobile, jwt_token, profile_picture, platform };
+        saveToSupabase(newUser);
+        return res.status(201).json({ message: "User synced successfully", user: newUser });
+      });
+    }
   });
 };
