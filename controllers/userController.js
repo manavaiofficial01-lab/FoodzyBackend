@@ -222,41 +222,6 @@ exports.loginUser = async (req, res) => {
     }
     
     if (results.length === 0) {
-      console.log(`[MySQL Miss] User ${emailOrMobile} not found in MySQL. Checking Supabase fallback...`);
-      try {
-        let supabaseUser = await fetchFromSupabase('email', emailOrMobile);
-        if (!supabaseUser) {
-          let formattedMobile = emailOrMobile;
-          if (/^\d{10}$/.test(formattedMobile)) {
-            formattedMobile = `+91${formattedMobile}`;
-          }
-          supabaseUser = await fetchFromSupabase('mobile', formattedMobile);
-        }
-
-        if (supabaseUser) {
-          console.log(`[Supabase Found] Restoring user ${supabaseUser.name} to MySQL database...`);
-          const insertSql = "INSERT INTO users (id, name, email, mobile, password, jwt_token, profile_picture, platform) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-          db.query(insertSql, [
-            supabaseUser.id,
-            supabaseUser.name,
-            supabaseUser.email,
-            supabaseUser.mobile,
-            supabaseUser.password,
-            supabaseUser.jwt_token,
-            supabaseUser.profile_picture,
-            supabaseUser.platform || 'android'
-          ], (insertErr) => {
-            if (insertErr) {
-              console.error("[Login Supabase Restore Error]:", insertErr.message);
-              return res.status(400).json({ error: "Invalid credentials" });
-            }
-            verifyPasswordAndLogin(supabaseUser, password, res);
-          });
-          return;
-        }
-      } catch (fallbackErr) {
-        console.error("[Login Fallback Error]:", fallbackErr.message);
-      }
       return res.status(400).json({ error: "Invalid credentials" });
     }
 

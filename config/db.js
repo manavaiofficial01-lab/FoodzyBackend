@@ -68,7 +68,7 @@ const db = mysql.createPool({
   port: parseInt(cleanEnvVar(process.env.DB_PORT) || '3306'),
   lookup: customLookup,
   waitForConnections: true,
-  connectionLimit: 15, // Increased to handle more requests simultaneously from multiple merged APIs
+  connectionLimit: 2, 
   queueLimit: 0
 });
 
